@@ -3,10 +3,12 @@ from .models import Product, Contact, Orders, OrderUpdate
 from math import ceil
 import json
 from django.views.decorators.csrf import csrf_exempt
-from paytm import Checksum
+# from PayTm import Checksum
 # Create your views here.
 from django.http import HttpResponse
+
 MERCHANT_KEY = 'Your-Merchant-Key-Here'
+
 
 def index(request):
     allProds = []
@@ -64,22 +66,22 @@ def contact(request):
 
 
 def tracker(request):
-    if request.method == "POST":
+    if request.method=="POST":
         orderId = request.POST.get('orderId', '')
         email = request.POST.get('email', '')
         try:
             order = Orders.objects.filter(order_id=orderId, email=email)
-            if len(order) > 0:
+            if len(order)>0:
                 update = OrderUpdate.objects.filter(order_id=orderId)
                 updates = []
                 for item in update:
                     updates.append({'text': item.update_desc, 'time': item.timestamp})
-                    response = json.dumps([updates, order[0].items_json], default=str)
+                    response = json.dumps({"status":"success", "updates": updates, "itemsJson": order[0].items_json}, default=str)
                 return HttpResponse(response)
             else:
-                return HttpResponse('{}')
+                return HttpResponse('{"status":"noitem"}')
         except Exception as e:
-            return HttpResponse('{}')
+            return HttpResponse('{"status":"error"}')
 
     return render(request, 'shop/tracker.html')
 
@@ -108,9 +110,10 @@ def checkout(request):
         update.save()
         thank = True
         id = order.order_id
-        # return render(request, 'shop/checkout.html', {'thank': thank, 'id': id})
+        # return render(request, 'shop/checkout.html', {'thank':thank, 'id': id})
         # request paytm to transfer the amount to your account after payment by user
         param_dict = {
+
             'MID': 'WorldP64425807474247',
             'ORDER_ID': 'order.order_id',
             'TXN_AMOUNT': '1',
@@ -118,13 +121,17 @@ def checkout(request):
             'INDUSTRY_TYPE_ID': 'Retail',
             'WEBSITE': 'WEBSTAGING',
             'CHANNEL_ID': 'WEB',
-            'CALLBACK_URL': 'http://127.0.0.1:8000/shop/handleRequest/',
+            'CALLBACK_URL': 'http://127.0.0.1:8000/shop/handlerequest/',
+
         }
-        param_dict['CHECKSUMHASH']=Checksum.generate_checksum(param_dict, MERCHANT_KEY)
-    return render(request, 'shop/paytm.html', {'param_dict': param_dict})
+        # param_dict['CHECKSUMHASH'] = Checksum.generate_checksum(param_dict, MERCHANT_KEY)
+        return render(request, 'shop/paytm.html', {'param_dict': param_dict})
+
     return render(request, 'shop/checkout.html')
 
+
 @csrf_exempt
-def handleRequest(request):
+def handlerequest(request):
     # paytm will send you post request here
+    return HttpResponse('done')
     pass
